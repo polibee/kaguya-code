@@ -1,0 +1,62 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-windows-exe
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Windows x64 installer
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows installer
+        run: pnpm bundle:desktop -- --os win --arch x64
+
+      - name: Create checksums
+        shell: pwsh
+        run: |
+          $artifacts = Get-ChildItem -Path packages/desktop/dist -Filter *.exe -File
+          if ($artifacts.Count -eq 0) {
+            throw 'No Windows installer was produced.'
+          }
+          $artifacts | ForEach-Object {
+            $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName
+            "$($hash.Hash.ToLowerInvariant())  $($_.Name)" |
+              Out-File -Encoding ascii -FilePath (Join-Path $_.DirectoryName "$($_.Name).sha256")
+          }
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: kaguya-code-windows-x64
+          path: |
+            packages/desktop/dist/*.exe
+            packages/desktop/dist/*.sha256
+          if-no-files-found: error
+          retention-days: 14
