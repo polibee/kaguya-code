@@ -22,12 +22,27 @@ export const DEFAULT_ENABLED_OFFICIAL_PLUGIN_IDS: ReadonlySet<string> = new Set(
   // 不参与那个判断。Browser Use 默认开着，宿主若默认关就等于它上来就没有宿主。
   "node-repl-host@zcode-plugins-official",
   "skill-creator@zcode-plugins-official",
+  "frontend-design@zcode-plugins-official",
   "plugin-creator@zcode-plugins-official",
   "zcode-guide@zcode-plugins-official",
   // 电脑控制回退为默认关闭，故 computer-use 不在此名单内。
   // 该集合必须与 official-plugin-definitions.ts 里标了 defaultEnabled 的插件逐一对应，
   // bootstrap 的「Settings 默认启用集合与 CLI 的官方插件声明一致」单测机械对照两者。
 ]);
+
+/**
+ * 对用户隐藏的官方插件：node-repl-host 是 Browser Use 与 Computer Use 共用的运行时宿主，
+ * 没有 skill / command / subagent，必须始终启用（见上面的默认启用集合）。设置页列出它会让用户
+ * 能把它关掉（Browser Use 随即失去宿主），@ 引用 Picker 列出它则毫无意义，两处共用这一判定。
+ * 只按官方市场里的具名 id 判断，不误伤第三方市场的同名插件。
+ */
+const HIDDEN_OFFICIAL_PLUGIN_IDS: ReadonlySet<string> = new Set([
+  "node-repl-host@zcode-plugins-official",
+]);
+
+export function isUserVisiblePluginId(pluginId: string): boolean {
+  return !HIDDEN_OFFICIAL_PLUGIN_IDS.has(pluginId);
+}
 
 export const DEFAULT_PLUGIN_MARKETPLACES: DefaultPluginMarketplace[] = [
   {
